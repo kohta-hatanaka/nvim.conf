@@ -1,25 +1,5 @@
 --[[
 
-=====================================================================
-==================== READ THIS BEFORE CONTINUING ====================
-=====================================================================
-========                                    .-----.          ========
-========         .----------------------.   | === |          ========
-========         |.-""""""""""""""""""-.|   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||   KICKSTART.NVIM   ||   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||                    ||   |-----|          ========
-========         ||:Tutor              ||   |:::::|          ========
-========         |'-..................-'|   |____o|          ========
-========         `"")----------------(""`   ___________      ========
-========        /::::::::::|  |::::::::::\  \ no mouse \     ========
-========       /:::========|  |==hjkl==:::\  \ required \    ========
-========      '""""""""""""'  '""""""""""""'  '""""""""""'   ========
-========                                                     ========
-=====================================================================
-=====================================================================
-
 What is Kickstart?
 
   Kickstart.nvim is *not* a distribution.
@@ -42,19 +22,6 @@ What is Kickstart?
     - (or HTML version): https://neovim.io/doc/user/lua-guide.html
 
 Kickstart Guide:
-
-  TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
-
-    If you don't know what this means, type the following:
-      - <escape key>
-      - :
-      - Tutor
-      - <enter key>
-
-    (If you already know the Neovim basics, you can skip this step.)
-
-  Once you've completed that, you can continue working through **AND READING** the rest
-  of the kickstart init.lua.
 
   Next, run AND READ `:help`.
     This will open up a help window with some basic information
@@ -413,6 +380,7 @@ do
       { '<leader>s', group = '[S]earch', mode = { 'n', 'v' } },
       { '<leader>t', group = '[T]oggle' },
       { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } }, -- Enable gitsigns recommended keymaps first
+      { '<leader>c', group = '[C]onfig' },
       { 'gr', group = 'LSP Actions', mode = { 'n' } },
     },
   }
@@ -443,6 +411,13 @@ do
   -- [[ mini.nvim ]]
   --  A collection of various small independent plugins/modules
   vim.pack.add { gh 'nvim-mini/mini.nvim' }
+
+  require('mini.files').setup()
+  require('mini.tabline').setup()
+
+  vim.keymap.set('n', '<leader>e', function()
+    require('mini.files').open(vim.uv.cwd(), true)
+  end, { desc = '[E]xplorer' })
 
   -- If a nerd font is available, load the icons module for pretty icons in various plugins.
   if vim.g.have_nerd_font then
@@ -609,20 +584,19 @@ do
 
   -- It's also possible to pass additional configuration options.
   --  See `:help telescope.builtin.live_grep()` for information about particular keys
-  vim.keymap.set(
-    'n',
-    '<leader>s/',
-    function()
-      builtin.live_grep {
-        grep_open_files = true,
-        prompt_title = 'Live Grep in Open Files',
-      }
-    end,
-    { desc = '[S]earch [/] in Open Files' }
-  )
+  vim.keymap.set('n', '<leader>s/', function()
+    builtin.live_grep {
+      grep_open_files = true,
+      prompt_title = 'Live Grep in Open Files',
+    }
+  end, { desc = '[S]earch [/] in Open Files' })
 
   -- Shortcut for searching your Neovim configuration files
-  vim.keymap.set('n', '<leader>sn', function() builtin.find_files { cwd = vim.fn.stdpath 'config', follow = true } end, { desc = '[S]earch [N]eovim files' })
+  vim.keymap.set('n', '<leader>sn', function()
+    builtin.find_files {
+      cwd = vim.fn.stdpath 'config',
+      follow = true } 
+  end, { desc = '[S]earch [N]eovim files' })
 end
 
 -- ============================================================
@@ -1037,3 +1011,113 @@ end
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+
+-- original commands
+do
+  -- config commands
+  vim.api.nvim_create_user_command("C", function(opts)
+    local files = {
+      i = "init.lua",
+      c = "cheatsheet.txt",
+      t = "test.txt",
+      k = "lua/keymaps.lua",
+      o = "lua/options.lua",
+    }
+
+    local file = files[opts.args]
+    if not file then
+      vim.notify("Unknown config file: " .. opts.args, vim.log.levels.ERROR)
+      return
+    end
+
+    local path = vim.fs.joinpath(vim.fn.stdpath("config"), file)
+    vim.cmd.edit(vim.fn.fnameescape(path))
+  end, {
+    nargs = 1,
+  })
+
+  vim.keymap.set("n", "<leader>ci", "<cmd>C i<cr>", {
+    desc = "[C]onfig [I]nit.lua",
+  })
+
+  vim.keymap.set("n", "<leader>cc", "<cmd>C c<cr>", {
+    desc = "[C]onfig [C]heatsheet",
+  })
+
+  vim.keymap.set("n", "<leader>ct", "<cmd>C t<cr>", {
+    desc = "[C]onfig [T]estfile",
+  })
+
+  vim.keymap.set("n", "<leader>ck", "<cmd>C k<cr>", {
+    desc = "[C]onfig [K]eymap",
+  })
+
+  vim.keymap.set("n", "<leader>co", "<cmd>C o<cr>", {
+    desc = "[C]onfig [O]ption",
+  })
+
+  vim.keymap.set('n', '<leader>ce', function()
+    require('mini.files').open(vim.fn.stdpath("config"), true)
+  end, { desc = '[C]onfig [E]xplorer' })
+
+  -- check warning ----------------
+  vim.keymap.set("n", "gl", function()
+    vim.diagnostic.open_float({ scope = "cursor" })
+  end, { desc = "Show diagnostic" })
+
+  -- terminal ---------------------- 
+    local terminal = {
+    buf = nil,
+    win = nil,
+  }
+
+  local function toggle_terminal()
+    -- 開いているなら閉じる
+    if terminal.win and vim.api.nvim_win_is_valid(terminal.win) then
+      vim.api.nvim_win_close(terminal.win, true)
+      terminal.win = nil
+      return
+    end
+
+    -- 開いていないなら下に表示
+    vim.cmd("belowright 12split")
+    terminal.win = vim.api.nvim_get_current_win()
+
+    if terminal.buf and vim.api.nvim_buf_is_valid(terminal.buf) then
+      vim.api.nvim_win_set_buf(terminal.win, terminal.buf)
+    else
+      vim.cmd("terminal")
+      terminal.buf = vim.api.nvim_get_current_buf()
+
+      -- windowを閉じてもterminal sessionを残す
+      vim.bo[terminal.buf].bufhidden = "hide"
+      vim.bo[terminal.buf].buflisted = false
+    end
+
+    vim.wo[terminal.win].winfixheight = true
+    vim.wo[terminal.win].winfixbuf = true
+
+    vim.cmd("startinsert")
+  end
+
+  -- Normal mode
+  vim.keymap.set({ "n", "t" }, "<C-p>", toggle_terminal, {
+    desc = "Toggle terminal",
+  })
+  -- vim.keymap.set("n", "<leader>t", function()
+  --   vim.cmd("belowright split | terminal")
+  --   vim.cmd("resize 12")
+  -- end, { desc = "Open terminal" })
+
+  vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>")
+  vim.keymap.set('n', '<C-h>', '<cmd>bp<cr>')
+  vim.keymap.set('n', '<C-j>', '<C-w>j')
+  vim.keymap.set('n', '<C-k>', '<C-w>k')
+  vim.keymap.set('n', '<C-l>', '<cmd>bn<cr>')
+  vim.keymap.set('t', '<C-j>', '<C-\\><C-n><C-w>j')
+  vim.keymap.set('t', '<C-k>', '<C-\\><C-n><C-w>k')
+
+  vim.keymap.set('n', '<M-j>', '<C-d>')
+  vim.keymap.set('n', '<M-k>', '<C-u>')
+end

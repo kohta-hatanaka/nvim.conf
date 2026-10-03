@@ -1,0 +1,14 @@
+# 置換について
+検索してそれを置換する時、/(search word)<Enter>の後にn押して置換してもいい場所に移動して、cgn(replace word)<Esc>をしてからnで移動→置換なら.しないならnでシームレスに行ける。
+
+半ページ移動は<Ctrl>+u/d
+
+# talescale
+<space>の後に
+e:explorer
+f:file
+sg:working space全体から検索
+- cdでworking space自体を変えられる。→oでopenできるようにしたい。
+- hjklで移動。lでファイルを開き、Lだとファイルツリーも閉じる。
+
+# 
